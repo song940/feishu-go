@@ -14,8 +14,8 @@ type Config struct {
 }
 
 type Client struct {
-	config  *Config
-	request *http.Client
+	*Config
+	*http.Client
 }
 
 type ResponseBase struct {
@@ -23,18 +23,14 @@ type ResponseBase struct {
 	Msg  string `json:"msg,omitempty"`
 }
 
-type FetchResponse = []byte
-
-func NewClient(config *Config) (client *Client, err error) {
-	request := http.DefaultClient
-	client = &Client{
-		config,
-		request,
+func NewClient(config *Config) *Client {
+	return &Client{
+		Config: config,
+		Client: http.DefaultClient,
 	}
-	return
 }
 
-func (c *Client) Request(path string, headers map[string]string, data interface{}) (out FetchResponse, err error) {
+func (c *Client) Request(path string, headers map[string]string, data interface{}) (out []byte, err error) {
 	payload, _ := json.Marshal(data)
 	// log.Println("payload", string(payload))
 	api := "https://open.feishu.cn/open-apis"
@@ -46,7 +42,7 @@ func (c *Client) Request(path string, headers map[string]string, data interface{
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	res, err := c.request.Do(req)
+	res, err := c.Client.Do(req)
 	if err != nil {
 		return
 	}
@@ -54,21 +50,21 @@ func (c *Client) Request(path string, headers map[string]string, data interface{
 	return
 }
 
-func (c *Client) RequestWithAppSecret(path string) (out FetchResponse, err error) {
+func (c *Client) RequestWithAppSecret(path string) (out []byte, err error) {
 	return c.Request(path, nil, map[string]string{
-		"app_id":     c.config.AppID,
-		"app_secret": c.config.AppSecret,
+		"app_id":     c.Config.AppID,
+		"app_secret": c.Config.AppSecret,
 	})
 }
 
 func (c *Client) SetAccessToken(accessToken string) {
 	// log.Println("accessToken:", accessToken)
-	c.config.AccessToken = accessToken
+	c.Config.AccessToken = accessToken
 }
 
-func (c *Client) RequestWithAccessToken(path string, data interface{}) (out FetchResponse, err error) {
+func (c *Client) RequestWithAccessToken(path string, data interface{}) (out []byte, err error) {
 	headers := map[string]string{
-		"Authorization": "Bearer " + c.config.AccessToken,
+		"Authorization": "Bearer " + c.Config.AccessToken,
 	}
 	return c.Request(path, headers, data)
 }
